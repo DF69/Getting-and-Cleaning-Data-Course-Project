@@ -1,0 +1,92 @@
+CodeBook
+ 
+1.Merges the training and the test sets to create one data set.
+
+a.upload files in R that will be used from working directory: 
+
+Xtest <- "X_test.txt"
+ytest <- "y_test.txt"
+Xtrain <- "X_train.txt"
+ytrain <- "y_train.txt"
+SubTrain <- "subject_train.txt"
+SubTest <- "subject_test.txt"
+
+b.merge in to groups Test and Train and finally these two add in only one
+  take care about dimensions (nummer of columns and rows have to match), for 
+  this files were merged by columns first and the two big files were merged 
+  by rows:
+
+Retest <- cbind(SubTest, ytest, Xtest)
+Retrain <- cbind(SubTrain, ytrain, Xtrain)
+dataAnalysis <- rbind(Retest, Retrain)
+
+
+2.Extracts only the measurements on the mean and standard deviation for each measurement. 
+
+a.using the features file selects columns with "mean" and "std" words, one per time. 
+
+features <- read.table("features.txt")
+cualMean <- c(grep("mean()", features$V2, fixed = TRUE))      
+cualStd <- c(grep("std()", features$V2, fixed = TRUE))
+
+b.sorting results, after that because added two columns before others it has to move two 
+  spaces to the right and input the nummer 1 and 2.
+
+cualesOriginal <- sort.int(c(cualMean, cualStd))
+cuales <- c(c(1,2), cualesOriginal + 2)
+
+c.using the integers list to selects columns and then create the first tidy data.
+
+TidyData1 <- dataAnalysis[,cuales]
+
+3.Uses descriptive activity names to name the activities in the data set
+
+a.to do that upload into R activity_labels.txt with activities 
+activity <- read.table("activity_labels.txt")
+
+b.loop over all TidyData1 to change its second column(integer) to character with activities
+  here is a tricky situacion because "as.character" change the class and it have to corrected
+  with "as.numeric":
+  
+for (i in 1:nrow(TidyData1)) {
+            num <- as.numeric(TidyData1$V1.1[i])
+            TidyData1$V1.1[i] <- as.character(activity$V2[num])
+}
+
+4.Appropriately labels the data set with descriptive variable names. 
+
+a.take names of columns from features, changes names of columns to create new names
+  more readibles.
+
+newColNames <- data.frame(features[cualesOriginal,]) 
+
+newColNames$V2 <- sub("^t","time", newColNames$V2)
+newColNames$V2 <- sub("^f","freq", newColNames$V2)
+newColNames$V2 <- sub("-mean()-X","MeanX", newColNames$V2, fixed = TRUE)
+newColNames$V2 <- sub("-mean()-Y","MeanY", newColNames$V2, fixed = TRUE)
+newColNames$V2 <- sub("-mean()-Z","MeanZ", newColNames$V2, fixed = TRUE)
+newColNames$V2 <- sub("-std()-X","StdX", newColNames$V2, fixed = TRUE)
+newColNames$V2 <- sub("-std()-Y","StdY", newColNames$V2, fixed = TRUE)
+newColNames$V2 <- sub("-std()-Z","StdZ", newColNames$V2, fixed = TRUE)
+newColNames$V2 <- sub("-mean()","Mean", newColNames$V2, fixed = TRUE)
+newColNames$V2 <- sub("-std()","Std", newColNames$V2, fixed = TRUE)
+
+b.remmenber added two names for the first columns. Then change the column names:
+
+colnames(TidyData1) <- c(c("Subject","Activity"), newColNames$V2)
+
+5.From the data set in step 4, creates a second, independent tidy data set with the average 
+of each variable for each activity and each subject.
+
+a.prepare a new data.frame where put the results:
+
+TidyData2 <- data.frame()
+
+b.there are 30 Subjects then first looping in it to grouping by. Into each group of subjects 
+calculates its mean per activity(6). With these results creates the final tidy data.
+
+for (i in 1:30) {
+                Subject <- TidyData1[TidyData1$Subject == i, ]
+                MeanAct <- aggregate(Subject, by = list(Subject$Activity), FUN = mean, na.rm = TRUE)
+                TidyData2 <- rbind(TidyData2, MeanAct) 
+}
